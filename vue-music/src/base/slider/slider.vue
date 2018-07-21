@@ -11,110 +11,108 @@
   </div>
 </template>
 <script>
-import BScroll from 'better-scroll';
+import BScroll from 'better-scroll'
 import { addClass } from 'common/js/dom'
 export default {
   data() {
     return {
       dots: [],
-      currentPageIndex: 0,
+      currentPageIndex: 0
     }
   },
   props: {
     loop: {
       type: Boolean,
-      default: true,
+      default: true
     },
     autoPlay: {
       type: Boolean,
-      default: true,
+      default: true
     },
     interval: {
       type: Number,
-      default: 4000,
-    },
+      default: 4000
+    }
   },
   mounted() {
     // 保证 DOM 完全渲染
     setTimeout(() => {
-      this._setSliderWidth();
-      this._initDots();
-      this._initSlider();
-      if(this.autoPlay) {
-        this._play();
+      this._setSliderWidth()
+      this._initDots()
+      this._initSlider()
+      if (this.autoPlay) {
+        this._play()
       }
-    }, 20);
+    }, 20)
     window.addEventListener('resize', () => {
       // 如果 slider 还没初始化
       if (!this.slider) {
-        return;
+        return
       }
-      this._setSliderWidth(true);
-      this.slider.refresh();
-    });
+      this._setSliderWidth(true)
+      this.slider.refresh()
+    })
   },
   methods: {
     // 计算并且设置宽度
     _setSliderWidth(isResize) {
-      this.children = this.$refs.sliderGroup.children;
-
-      let width = 0;
-      let sliderWidth = this.$refs.slider.clientWidth;
+      this.children = this.$refs.sliderGroup.children
+      let width = 0
+      let sliderWidth = this.$refs.slider.clientWidth
       for (let i = 0; i < this.children.length; i++) {
-        let child = this.children[i];
+        let child = this.children[i]
         // 添加类名
-        addClass(child, 'slider-item');
+        addClass(child, 'slider-item')
         // 设置每个 item 的宽度是父容器的宽度
-        child.style.width = sliderWidth + 'px';
+        child.style.width = sliderWidth + 'px'
         // group 的总宽度需要累加
-        width += sliderWidth;
+        width += sliderWidth
       };
       // 当循环切换的时候，会克隆两个 dom 来保证循环切换
       // 加上 resize 这个标识，是为了防止当 resize 之后，这个宽度会多加 2 倍
-      if(this.loop && !isResize) {
+      if (this.loop && !isResize) {
         // 所以是两倍
-        width += 2 * sliderWidth;
+        width += 2 * sliderWidth
       };
-      this.$refs.sliderGroup.style.width = width + 'px';
+      this.$refs.sliderGroup.style.width = width + 'px'
     },
     _initDots() {
-      this.dots = new Array(this.children.length);
+      this.dots = new Array(this.children.length)
     },
     // 初始化 slider
     _initSlider() {
-      this.children = this.$refs.sliderGroup.children;
+      this.children = this.$refs.sliderGroup.children
       // 在使用 better-scroll 的时候，为了无缝滚动会克隆最后一张和第一张，所以在获取有几个节点的时候，一定要在 better-scroll 之前进行
       this.slider = new BScroll(this.$refs.slider, {
         scrollX: true,
         scrollY: false,
         momentum: false,
-        snap: true,
         snap: {
           loop: this.loop,
           threshold: 0.3,
-          speed: 400,
+          speed: 400
         },
-        click: true,
-      });
+        click: true
+      })
       // 组件提供的事件回调
       this.slider.on('scrollEnd', () => {
-        this.currentPageIndex = this.slider.getCurrentPage().pageX;
+        this.currentPageIndex = this.slider.getCurrentPage().pageX
         // 如果不清除这个定时器，就会发生到自动滚动一次就不动了，并且是为了防止手动拖动又回去了。
-        if(this.autoPlay) {
-          clearTimeout(this.timer);
-          this._play();
+        if (this.autoPlay) {
+          clearTimeout(this.timer)
+          this._play()
         }
-      });
+      })
     },
     _play() {
-      let pageIndex = this.currentPageIndex + 1;
+      // let pageIndex = this.currentPageIndex + 1
       this.timer = setTimeout(() => {
         // better-scroll 接口
-        this.slider.next();
-      }, this.interval);
+        this.slider.next()
+      }, this.interval)
     },
     destroyed() {
-      clearTimeout(this.timer);
+      clearTimeout(this.timer)
     }
   }
 }
