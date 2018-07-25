@@ -3,6 +3,8 @@
       class="listview"
       :data="data"
       ref="listview"
+      :listenScroll="listenScroll"
+      :probeType="probeType"
       @scroll="scroll">
     <ul>
       <li v-for="group in data" class="list-group" ref="listGroup">
@@ -17,22 +19,41 @@
     </ul>
     <div class="list-shortcut" @touchstart="onShortcutTouchStart" @touchmove.stop="onShortcutTouchMove">
       <ul>
-        <li v-for="(item, index) in shortcutList" class="item" :data-index="index">
+        <li v-for="(item, index) in shortcutList"
+          class="item"
+          :data-index="index"
+          :class="{'current': currentIndex === index}">
           {{ item }}
         </li>
       </ul>
+    </div>
+    <div class="list-fixed" v-show="fixedTitle" ref="fixed">
+      <h1 class="fixed-title">{{fixedTitle}}</h1>
+    </div>
+    <div v-show="!data.length" class="loading-container">
+      <loading></loading>
     </div>
   </scroll>
 </template>
 
 <script>
 import Scroll from 'base/scroll/scroll'
+import Loading from 'base/loading/loading'
 import { getData } from 'common/js/dom'
 // 这里是 css 样式定义来的
 const ANCHOR_HEIGHT = 18
+const TITLE_HEIGHT = 30
 export default {
   components: {
-    Scroll
+    Scroll,
+    Loading
+  },
+  data() {
+    return {
+      scrollY: -1,
+      currentIndex: 0,
+      diff: -1
+    }
   },
   props: {
     data: {
@@ -45,10 +66,19 @@ export default {
       return this.data.map((group) => {
         return group.title.substr(0, 1)
       })
+    },
+    fixedTitle() {
+      if (this.scrollY > 0) {
+        return ''
+      }
+      return this.data[this.currentIndex] ? this.data[this.currentIndex].title : ''
     }
   },
   created() {
     this.touch = {}
+    this.listenScroll = true
+    this.listHeight = []
+    this.probeType = 3
   },
   methods: {
     onShortcutTouchStart(e) {
@@ -68,12 +98,63 @@ export default {
       let anchorIndex = parseInt(this.touch.anchorIndex) + delta
       this._scrollTo(anchorIndex)
     },
+    scroll(pos) {
+      this.scrollY = pos.y
+    },
     _scrollTo(index) {
+      // 处理边界情况
+      if (!index && index !== 0) {
+        return
+      }
+      if (index < 0) {
+        index = 0
+      } else if (index > this.listHeight.length - 2) {
+        index = this.listHeight.length - 2
+      }
+      this.scrollY = 0 - this.listHeight[index]
       // 后面的 0 表示不需要动画
       this.$refs.listview.scrollToElement(this.$refs.listGroup[index], 0)
     },
-    scroll() {
-
+    _calculateHeight() {
+      this.listHeight = []
+      const list = this.$refs.listGroup
+      let height = 0
+      this.listHeight.push(height)
+      for (let i = 0; i < list.length; i++) {
+        let item = list[i]
+        height += item.clientHeight
+        this.listHeight.push(height)
+      }
+    }
+  },
+  watch: {
+    data() {
+      setTimeout(() => {
+        this._calculateHeight()
+      }, 20)
+    },
+    scrollY(newY) {
+      const listHeight = this.listHeight
+      for (let i = 0; i < listHeight.length; i++) {
+        let height1 = listHeight[i]
+        let height2 = listHeight[i + 1]
+        // 因为上划 newY 为负值, 注意这里一定要判断等于的情况，不然会出错
+        if (!height2 || (-newY >= height1 && -newY < height2)) {
+          this.currentIndex = i
+          this.diff = height2 + newY
+          return
+        }
+      }
+      this.currentIndex = 0
+    },
+    // 为了让 上面的 fix title 的平滑过渡
+    diff(newVal) {
+      let fixedTop = (newVal > 0 && newVal < TITLE_HEIGHT) ? newVal - TITLE_HEIGHT : 0
+      if (this.fixedTop === fixedTop) {
+        return
+      }
+      this.fixedTop = fixedTop
+      this.$refs.fixed.style.transform = `translate3d(0, ${fixedTop}px, 0)`
     }
   }
 }
